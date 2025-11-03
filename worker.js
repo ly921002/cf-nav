@@ -545,6 +545,126 @@ function renderHTML() {
         color: #94a3b8; /* 浅灰色描述文字 */
       }
     }
+
+    /* 搜索框样式 */
+    .search-container {
+      max-width: 600px;
+      margin: 1.5rem auto 0;
+      width: 100%;
+    }
+
+    .search-form {
+      width: 100%;
+    }
+
+    .search-input-group {
+      display: flex;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50px;
+      padding: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .search-input-group:focus-within {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 12px 20px;
+      font-size: 1rem;
+      color: #1e293b;
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-button {
+      background: #2563eb;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: white;
+    }
+
+    .search-button:hover {
+      background: #1d4ed8;
+      transform: scale(1.05);
+    }
+
+    .search-button:active {
+      transform: scale(0.95);
+    }
+
+    /* 暗色模式下的搜索框 */
+    @media (prefers-color-scheme: dark) {
+      .search-input-group {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .search-input-group:focus-within {
+        background: rgba(30, 41, 59, 0.9);
+        border-color: rgba(59, 130, 246, 0.5);
+      }
+      
+      .search-input {
+        color: #e2e8f0;
+      }
+      
+      .search-input::placeholder {
+        color: #94a3b8;
+      }
+    }
+
+    /* 移动端搜索框适配 */
+    @media (max-width: 768px) {
+      .search-container {
+        max-width: 90%;
+        margin: 1rem auto 0;
+      }
+      
+      .search-input {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+      }
+      
+      .search-button {
+        width: 40px;
+        height: 40px;
+      }
+      
+      .search-button svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .search-container {
+        max-width: 95%;
+      }
+      
+      .search-input {
+        padding: 8px 14px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -555,7 +675,21 @@ function renderHTML() {
     <header class="header">
       <h1>✨ 我的导航</h1>
       <p>个人专属导航页面 - 高效访问常用资源</p>
+      <!-- 新增谷歌搜索框 -->
+      <div class="search-container">
+        <form action="https://www.google.com/search" method="GET" target="_blank" class="search-form">
+          <div class="search-input-group">
+            <input type="text" name="q" placeholder="输入关键词进行谷歌搜索..." class="search-input" autocomplete="off">
+            <button type="submit" class="search-button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
     </header>
+    
     
     <div class="menu-tabs" id="menuTabs">
       <!-- 菜单将通过 JS 动态生成 -->
@@ -779,7 +913,7 @@ function renderHTML() {
       // 初始化各种效果
       initParticles();
       initMouseEffect();
-      
+
       // 启动运行时间计时器
       updateUptime();
       setInterval(updateUptime, 1000);
