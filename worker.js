@@ -98,14 +98,16 @@ function renderHTML() {
   <meta name="keywords" content="导航,书签,常用网站,工具集合,个人导航,快速访问" />
   <style>
     :root {
-      --primary-color: #2563eb;
-      --card-bg: rgba(255, 255, 255, 0.85);
-      --text-color: #1e293b;
-      --link-hover: #3b82f6;
-      --header-color: rgba(255, 255, 255, 0.2);
-      --uptime-bg: rgba(255, 255, 255, 0.8);
-      --glass-bg: rgba(255, 255, 255, 0.1);
-      --glass-border: rgba(255, 255, 255, 0.2);
+    --primary-color: #2563eb;
+    --card-bg: rgba(255, 255, 255, 0.7); /* 增加透明度 */
+    --card-bg-hover: rgba(255, 255, 255, 0.9); /* 新增悬停背景色 */
+    --text-color: #1e293b;
+    --link-hover: #3b82f6;
+    --header-color: rgba(255, 255, 255, 0.2);
+    --uptime-bg: rgba(255, 255, 255, 0.8);
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --card-shadow: rgba(0, 0, 0, 0.1); /* 新增卡片阴影颜色 */
     }
 
     * { 
@@ -259,30 +261,43 @@ function renderHTML() {
     /* 卡片网格 - 调整为更小的卡片 */
     .cards-grid { 
       display: grid; 
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
       gap: 20px; 
       margin-bottom: 2rem;
     }
     
     .card { 
       background: var(--card-bg);
-      padding: 1.5rem; 
+      padding: 1.2rem; 
       border-radius: 16px; 
       text-decoration: none; 
       color: var(--text-color); 
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: block;
-      backdrop-filter: blur(12px) saturate(180%);
-      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px) saturate(180%); /* 增加模糊效果 */
+      border: 1px solid rgba(255, 255, 255, 0.3); /* 调整边框透明度 */
       box-shadow: 
-        0 6px 24px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 8px 32px var(--card-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3); /* 调整内阴影 */
       position: relative;
       overflow: hidden;
-      height: 140px; /* 固定高度使卡片更紧凑 */
+      height: 120px;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .card:hover { 
+      transform: translateY(-5px) scale(1.02);
+      background: var(--card-bg-hover); /* 使用新的悬停背景色 */
+      border: 1px solid rgba(255, 255, 255, 0.5); /* 悬停时边框更明显 */
+      box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.15),
+        0 6px 20px rgba(59, 130, 246, 0.2);
+      text-decoration: none;
+      color: var(--text-color);
     }
     
     .card::before {
@@ -312,18 +327,25 @@ function renderHTML() {
     
     .card-content {
       display: flex;
+      flex-direction: column; /* 改为垂直排列 */
       align-items: center;
-      gap: 15px;
+      justify-content: center;
+      gap: 12px; /* 调整间距 */
+      width: 100%; /* 确保宽度充满 */
     }
     
     .card-icon { 
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
+      width: 40px; /* 增大图标宽度 */
+      height: 40px; /* 增大图标高度 */
+      border-radius: 10px; /* 增大圆角 */
       object-fit: cover;
-      flex-shrink: 1;
+      flex-shrink: 0; /* 防止图标被压缩 */
       transition: transform 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 1.5rem; /* 增大字体图标大小 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .card:hover .card-icon {
@@ -331,28 +353,33 @@ function renderHTML() {
     }
     
     .card-text {
-      flex: 1;
-      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* 新增：文本内容居中 */
+      gap: 4px;
+      width: 100%; /* 确保宽度充满 */
     }
     
     .card-title { 
-      font-size: 1.1rem; 
-      margin-bottom: 0.4rem; 
+      font-size: 1.1rem; /* 保持标题大小 */
+      margin-bottom: 0.3rem; /* 减小底部间距 */
       font-weight: 600;
       color: var(--primary-color);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      width: 100%; /* 确保标题宽度充满 */
     }
     
     .card-desc { 
       color: #64748b; 
-      font-size: 0.85rem; 
-      line-height: 1.3;
+      font-size: 0.8rem; /* 减小描述文字大小 */
+      line-height: 1.2;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      max-width: 90%; /* 限制描述文字宽度 */
     }
     
     /* 运行时间显示 */
@@ -420,10 +447,15 @@ function renderHTML() {
     
     /* 响应式设计 */
     @media (max-width: 768px) {
-      .cards-grid { 
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-        gap: 15px;
+      .card {
+        padding: 1.2rem;
+        height: 130px;
       }
+      
+      .card-content {
+        gap: 10px; /* 移动端间距稍小 */
+      }
+    }
       
       .header h1 { 
         font-size: 2rem; 
@@ -484,24 +516,33 @@ function renderHTML() {
     @media (prefers-color-scheme: dark) {
       :root {
         --text-color: #e2e8f0;
-        --card-bg: rgba(15, 23, 42, 0.8);
+        --card-bg: rgba(15, 23, 42, 0.6); /* 增加暗色模式透明度 */
+        --card-bg-hover: rgba(30, 41, 59, 0.8); /* 暗色模式悬停背景 */
         --header-color: rgba(15, 23, 42, 0.5);
         --uptime-bg: rgba(15, 23, 42, 0.8);
         --glass-bg: rgba(255, 255, 255, 0.05);
         --glass-border: rgba(255, 255, 255, 0.1);
+        --card-shadow: rgba(0, 0, 0, 0.3); /* 暗色模式阴影更深 */
       }
       
       .card {
         background: var(--card-bg);
         color: var(--text-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
       }
       
       .card:hover {
-        background: rgba(30, 41, 59, 0.9);
+        background: var(--card-bg-hover);
+        border: 1px solid rgba(255, 255, 255, 0.2);
       }
       
-      .card-icon {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      /* 调整暗色模式下的卡片标题颜色 */
+      .card-title {
+        color: #e2e8f0; /* 亮色文字 */
+      }
+      
+      .card-desc {
+        color: #94a3b8; /* 浅灰色描述文字 */
       }
     }
   </style>
