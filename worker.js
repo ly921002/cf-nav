@@ -3,22 +3,298 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
+// 密码配置
+const PASSWORD_CONFIG = {
+  defaultPassword: '123456',
+  sessionExpiry: 24,
+  maxAttempts: 5
+}
+
+// 存储会话
+let sessions = new Map()
+let passwordData = new Map()
+
 async function handleRequest(request) {
   const url = new URL(request.url)
-  
-  // API 路由处理
-  if (url.pathname.startsWith('/api/')) {
-    return handleAPI(request)
-  }
   
   // 静态资源处理
   if (url.pathname === '/favicon.ico') {
     return new Response(null, { status: 404 })
   }
   
+  // API 路由处理
+  if (url.pathname.startsWith('/api/')) {
+    return handleAPI(request)
+  }
+  
+  // 登录页面路由
+  if (url.pathname === '/login') {
+    if (request.method === 'POST') {
+      return handleLoginPost(request)
+    }
+    return renderLoginPage()
+  }
+  
+  // 退出登录
+  if (url.pathname === '/logout') {
+    return handleLogout(request)
+  }
+  
+  // 检查登录状态
+  const session = await checkSession(request)
+  if (!session) {
+    return redirectToLogin()
+  }
+  
   // 主页面
-  return new Response(renderHTML(), {
+  return new Response(renderHTML(session.username), {
+    headers: { 
+      'Content-Type': 'text/html; charset=utf-8',
+      'Set-Cookie': `session=${session.sessionId}; Path=/; HttpOnly; Max-Age=${PASSWORD_CONFIG.sessionExpiry * 3600}`
+    }
+  })
+}
+
+// 处理登录POST请求
+async function handleLoginPost(request) {
+  try {
+    const formData = await request.formData()
+    const username = formData.get('username') || 'admin'
+    const password = formData.get('password')
+    
+    // 初始化密码存储
+    if (!passwordData.has('admin')) {
+      passwordData.set('admin', PASSWORD_CONFIG.defaultPassword)
+    }
+    
+    const storedPassword = passwordData.get(username)
+    
+    if (storedPassword && storedPassword === password) {
+      // 生成会话ID
+      const sessionId = generateSessionId()
+      const session = {
+        sessionId,
+        username,
+        expires: Date.now() + (PASSWORD_CONFIG.sessionExpiry * 3600 * 1000)
+      }
+      
+      sessions.set(sessionId, session)
+      
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': '/',
+          'Set-Cookie': `session=${sessionId}; Path=/; HttpOnly; Max-Age=${PASSWORD_CONFIG.sessionExpiry * 3600}`
+        }
+      })
+    } else {
+      return renderLoginPage('用户名或密码错误')
+    }
+  } catch (error) {
+    return renderLoginPage('登录请求格式错误')
+  }
+}
+
+// 检查会话有效性
+async function checkSession(request) {
+  const cookieHeader = request.headers.get('Cookie')
+  if (!cookieHeader) return null
+  
+  const cookies = new Map(cookieHeader.split(';').map(c => c.trim().split('=')))
+  const sessionId = cookies.get('session')
+  
+  if (!sessionId || !sessions.has(sessionId)) return null
+  
+  const session = sessions.get(sessionId)
+  if (Date.now() > session.expires) {
+    sessions.delete(sessionId)
+    return null
+  }
+  
+  // 更新会话过期时间
+  session.expires = Date.now() + (PASSWORD_CONFIG.sessionExpiry * 3600 * 1000)
+  return session
+}
+
+// 重定向到登录页面
+function redirectToLogin() {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': '/login'
+    }
+  })
+}
+
+// 渲染登录页面
+function renderLoginPage(errorMessage = '') {
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 我的导航</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-size: cover;
+      background-position: center;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2.5rem;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      backdrop-filter: blur(10px);
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-header h1 {
+      color: #333;
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+    .login-header p {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #333;
+      font-weight: 500;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .login-btn:hover {
+      transform: translateY(-2px);
+    }
+    .error-message {
+      color: #e74c3c;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      min-height: 20px;
+    }
+    .footer-links {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .success-message {
+      color: #27ae60;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>🔐 登录</h1>
+      <p>请输入密码访问导航站</p>
+    </div>
+    <form id="loginForm" method="POST" action="/login">
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" value="admin" readonly>
+      </div>
+      <div class="form-group">
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" required autofocus placeholder="请输入密码">
+      </div>
+      <button type="submit" class="login-btn">登录</button>
+    </form>
+    ${errorMessage ? `<div class="error-message">${errorMessage}</div>` : '<div class="error-message"></div>'}
+    <div class="footer-links">      
+  </div>
+
+  <script>
+    // 添加表单提交反馈
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      const submitBtn = this.querySelector('.login-btn');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = '登录中...';
+      submitBtn.disabled = true;
+      
+      setTimeout(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }, 2000);
+    });
+
+    // 自动聚焦到密码输入框
+    document.getElementById('password').focus();
+    
+    // 回车键提交
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('loginForm').requestSubmit();
+      }
+    });
+  </script>
+</body>
+</html>`
+  
+  return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
+}
+
+// 处理退出登录
+async function handleLogout(request) {
+  const cookieHeader = request.headers.get('Cookie')
+  if (cookieHeader) {
+    const cookies = new Map(cookieHeader.split(';').map(c => c.trim().split('=')))
+    const sessionId = cookies.get('session')
+    if (sessionId) {
+      sessions.delete(sessionId)
+    }
+  }
+  
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': '/login',
+      'Set-Cookie': 'session=; Path=/; HttpOnly; Max-Age=0'
+    }
   })
 }
 
@@ -26,6 +302,17 @@ async function handleRequest(request) {
 async function handleAPI(request) {
   const url = new URL(request.url)
   const path = url.pathname
+  
+  // 修改密码API
+  if (path === '/api/change-password' && request.method === 'POST') {
+    return handleChangePassword(request)
+  }
+  
+  // 检查登录状态
+  const session = await checkSession(request)
+  if (!session && path !== '/api/login') {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
+  }
   
   // 模拟数据存储
   const mockData = {
@@ -42,8 +329,7 @@ async function handleAPI(request) {
     ],
     cards: [
       { id: 1, menuId: 1, title: 'Google', url: 'https://google.com', icon: '🌐', description: '全球搜索引擎' },
-      { id: 1, menuId: 1, title: 'GMAIL', url: 'https://mail.google.com', icon: '📧', description: '谷歌邮箱服务' },
-      { id: 1, menuId: 1, title: 'GitHub', url: 'https://github.com', icon: '💻', description: '代码托管平台' }
+      { id: 1, menuId: 1, title: 'Google', url: 'https://google.com', icon: '🌐', description: '全球搜索引擎' }
     ],
     ads: [],
     friends: []
@@ -71,16 +357,60 @@ async function handleAPI(request) {
   return jsonResponse({ error: 'Not found' }, 404)
 }
 
+// 处理修改密码
+async function handleChangePassword(request) {
+  try {
+    const session = await checkSession(request)
+    if (!session) {
+      return jsonResponse({ error: 'Unauthorized' }, 401)
+    }
+    
+    const { currentPassword, newPassword } = await request.json()
+    const storedPassword = passwordData.get(session.username) || PASSWORD_CONFIG.defaultPassword
+    
+    if (storedPassword !== currentPassword) {
+      return jsonResponse({
+        success: false,
+        message: '当前密码错误'
+      }, 401)
+    }
+    
+    passwordData.set(session.username, newPassword)
+    
+    return jsonResponse({
+      success: true,
+      message: '密码修改成功'
+    })
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      message: '请求格式错误'
+    }, 400)
+  }
+}
+
+// 生成随机会话ID
+function generateSessionId() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 // JSON 响应辅助函数
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
   })
 }
 
 // 渲染主页面 HTML
-function renderHTML() {
+function renderHTML(username = '用户') {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -93,15 +423,15 @@ function renderHTML() {
   <style>
     :root {
     --primary-color: #2563eb;
-    --card-bg: rgba(255, 255, 255, 0.3); /* 增加透明度 */
-    --card-bg-hover: rgba(255, 255, 255, 0.5); /* 新增悬停背景色 */
+    --card-bg: rgba(255, 255, 255, 0.3);
+    --card-bg-hover: rgba(255, 255, 255, 0.5);
     --text-color: #1e293b;
     --link-hover: #3b82f6;
     --header-color: rgba(255, 255, 255, 0.2);
     --uptime-bg: rgba(255, 255, 255, 0.5);
     --glass-bg: rgba(255, 255, 255, 0.1);
     --glass-border: rgba(255, 255, 255, 0.2);
-    --card-shadow: rgba(0, 0, 0, 0.1); /* 新增卡片阴影颜色 */
+    --card-shadow: rgba(0, 0, 0, 0.1);
     }
 
     * { 
@@ -125,7 +455,6 @@ function renderHTML() {
       position: relative;
     }
     
-    /* 背景叠加层 */
     body::before {
       content: '';
       position: fixed;
@@ -137,7 +466,6 @@ function renderHTML() {
       z-index: -1;
     }
     
-    /* 动态粒子背景 */
     #particles-js {
       position: fixed;
       top: 0;
@@ -154,7 +482,6 @@ function renderHTML() {
       z-index: 1;
     }
     
-    /* 头部样式 */
     .header { 
       text-align: center; 
       margin-bottom: 2rem; 
@@ -203,7 +530,52 @@ function renderHTML() {
       text-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     
-    /* 菜单标签 */
+    .user-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      font-size: 0.9rem;
+    }
+    
+    .user-menu {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .user-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 10px;
+      padding: 10px 0;
+      min-width: 150px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+    
+    .user-menu:hover .user-dropdown {
+      display: block;
+    }
+    
+    .user-dropdown a {
+      display: block;
+      padding: 10px 20px;
+      color: #333;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+    
+    .user-dropdown a:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    
     .menu-tabs { 
       display: flex; 
       justify-content: center; 
@@ -252,7 +624,6 @@ function renderHTML() {
         0 4px 12px rgba(59, 130, 246, 0.3);
     }
     
-    /* 卡片网格 - 调整为更小的卡片 */
     .cards-grid { 
       display: grid; 
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
@@ -268,11 +639,11 @@ function renderHTML() {
       color: var(--text-color); 
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: block;
-      backdrop-filter: blur(16px) saturate(180%); /* 增加模糊效果 */
-      border: 1px solid rgba(255, 255, 255, 0.1); /* 调整边框透明度 */
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: 
         0 8px 32px var(--card-shadow),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1); /* 调整内阴影 */
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
       position: relative;
       overflow: hidden;
       height: 120px;
@@ -285,8 +656,8 @@ function renderHTML() {
     
     .card:hover { 
       transform: translateY(-5px) scale(1.02);
-      background: var(--card-bg-hover); /* 使用新的悬停背景色 */
-      border: 1px solid rgba(255, 255, 255, 0.3); /* 悬停时边框更明显 */
+      background: var(--card-bg-hover);
+      border: 1px solid rgba(255, 255, 255, 0.3);
       box-shadow: 
         0 12px 40px rgba(0, 0, 0, 0.15),
         0 6px 20px rgba(59, 130, 246, 0.2);
@@ -309,34 +680,24 @@ function renderHTML() {
       left: 100%;
     }
     
-    .card:hover { 
-      transform: translateY(-5px) scale(1.02);
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 
-        0 12px 32px rgba(0, 0, 0, 0.15),
-        0 6px 20px rgba(59, 130, 246, 0.2);
-      text-decoration: none;
-      color: var(--text-color);
-    }
-    
     .card-content {
       display: flex;
-      flex-direction: column; /* 改为垂直排列 */
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px; /* 调整间距 */
-      width: 100%; /* 确保宽度充满 */
+      gap: 12px;
+      width: 100%;
     }
     
     .card-icon { 
-      width: 40px; /* 增大图标宽度 */
-      height: 40px; /* 增大图标高度 */
-      border-radius: 10px; /* 增大圆角 */
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
       object-fit: cover;
-      flex-shrink: 0; /* 防止图标被压缩 */
+      flex-shrink: 0;
       transition: transform 0.3s ease;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      font-size: 1.5rem; /* 增大字体图标大小 */
+      font-size: 1.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -349,34 +710,33 @@ function renderHTML() {
     .card-text {
       display: flex;
       flex-direction: column;
-      align-items: center; /* 新增：文本内容居中 */
+      align-items: center;
       gap: 4px;
-      width: 100%; /* 确保宽度充满 */
+      width: 100%;
     }
     
     .card-title { 
-      font-size: 1.1rem; /* 保持标题大小 */
-      margin-bottom: 0.3rem; /* 减小底部间距 */
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
       font-weight: 600;
       color: var(--primary-color);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      width: 100%; /* 确保标题宽度充满 */
+      width: 100%;
     }
     
     .card-desc { 
       color: #64748b; 
-      font-size: 0.8rem; /* 减小描述文字大小 */
+      font-size: 0.8rem;
       line-height: 1.2;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      max-width: 90%; /* 限制描述文字宽度 */
+      max-width: 90%;
     }
     
-    /* 运行时间显示 */
     .uptime-container {
       background: var(--uptime-bg);
       border: 1px solid var(--glass-border);
@@ -416,7 +776,6 @@ function renderHTML() {
       margin-right: 12px;
     }
     
-    /* 加载动画 */
     .loading { 
       text-align: center; 
       padding: 3rem; 
@@ -439,7 +798,58 @@ function renderHTML() {
       100% { transform: rotate(360deg); } 
     }
     
-    /* 响应式设计 */
+    /* 密码修改模态框 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .modal h3 {
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 1.5rem;
+      justify-content: flex-end;
+    }
+    
+    .modal-buttons button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    
     @media (max-width: 768px) {
       .card {
         padding: 1.2rem;
@@ -447,9 +857,8 @@ function renderHTML() {
       }
       
       .card-content {
-        gap: 10px; /* 移动端间距稍小 */
+        gap: 10px;
       }
-    }
       
       .header h1 { 
         font-size: 2rem; 
@@ -489,6 +898,12 @@ function renderHTML() {
       .card-desc {
         font-size: 0.8rem;
       }
+      
+      .user-info {
+        position: static;
+        justify-content: center;
+        margin-top: 1rem;
+      }
     }
     
     @media (max-width: 480px) {
@@ -506,17 +921,16 @@ function renderHTML() {
       }
     }
     
-    /* 暗色模式支持 */
     @media (prefers-color-scheme: dark) {
       :root {
         --text-color: #e2e8f0;
-        --card-bg: rgba(15, 23, 42, 0.6); /* 增加暗色模式透明度 */
-        --card-bg-hover: rgba(30, 41, 59, 0.8); /* 暗色模式悬停背景 */
+        --card-bg: rgba(15, 23, 42, 0.6);
+        --card-bg-hover: rgba(30, 41, 59, 0.8);
         --header-color: rgba(15, 23, 42, 0.5);
         --uptime-bg: rgba(15, 23, 42, 0.8);
         --glass-bg: rgba(255, 255, 255, 0.05);
         --glass-border: rgba(255, 255, 255, 0.1);
-        --card-shadow: rgba(0, 0, 0, 0.3); /* 暗色模式阴影更深 */
+        --card-shadow: rgba(0, 0, 0, 0.3);
       }
       
       .card {
@@ -530,17 +944,24 @@ function renderHTML() {
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
       
-      /* 调整暗色模式下的卡片标题颜色 */
       .card-title {
-        color: #e2e8f0; /* 亮色文字 */
+        color: #e2e8f0;
       }
       
       .card-desc {
-        color: #94a3b8; /* 浅灰色描述文字 */
+        color: #94a3b8;
+      }
+      
+      .modal-content {
+        background: #1e293b;
+        color: #e2e8f0;
+      }
+      
+      .modal h3 {
+        color: #e2e8f0;
       }
     }
 
-    /* 搜索框样式 */
     .search-container {
       max-width: 600px;
       margin: 1.5rem auto 0;
@@ -606,7 +1027,6 @@ function renderHTML() {
       transform: scale(0.95);
     }
 
-    /* 暗色模式下的搜索框 */
     @media (prefers-color-scheme: dark) {
       .search-input-group {
         background: rgba(15, 23, 42, 0.8);
@@ -627,7 +1047,6 @@ function renderHTML() {
       }
     }
 
-    /* 移动端搜索框适配 */
     @media (max-width: 768px) {
       .search-container {
         max-width: 90%;
@@ -662,14 +1081,24 @@ function renderHTML() {
   </style>
 </head>
 <body>
-  <!-- 粒子背景容器 -->
   <div id="particles-js"></div>
   
   <div class="container">
     <header class="header">
+      <div class="user-info">
+        <span>欢迎, ${username}</span>
+        <div class="user-menu">
+          <span>⚙️</span>
+          <div class="user-dropdown">
+            <a href="#" onclick="showChangePasswordModal()">修改密码</a>
+            <a href="/logout">退出登录</a>
+          </div>
+        </div>
+      </div>
+      
       <h1>✨ 我的导航</h1>
       <p>个人专属导航页面 - 高效访问常用资源</p>
-      <!-- 新增谷歌搜索框 -->
+      
       <div class="search-container">
         <form action="https://www.google.com/search" method="GET" target="_blank" class="search-form">
           <div class="search-input-group">
@@ -683,7 +1112,6 @@ function renderHTML() {
         </form>
       </div>
     </header>
-    
     
     <div class="menu-tabs" id="menuTabs">
       <!-- 菜单将通过 JS 动态生成 -->
@@ -709,6 +1137,32 @@ function renderHTML() {
     </div>
   </div>
 
+  <!-- 密码修改模态框 -->
+  <div id="passwordModal" class="modal">
+    <div class="modal-content">
+      <h3>修改密码</h3>
+      <form id="changePasswordForm">
+        <div class="form-group">
+          <label for="currentPassword">当前密码</label>
+          <input type="password" id="currentPassword" name="currentPassword" required>
+        </div>
+        <div class="form-group">
+          <label for="newPassword">新密码</label>
+          <input type="password" id="newPassword" name="newPassword" required>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">确认新密码</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" required>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn-secondary" onclick="hideChangePasswordModal()">取消</button>
+          <button type="submit" class="btn-primary">确认修改</button>
+        </div>
+      </form>
+      <div id="passwordMessage" style="margin-top: 1rem; text-align: center;"></div>
+    </div>
+  </div>
+
   <script>
     // 粒子背景配置
     function initParticles() {
@@ -722,13 +1176,12 @@ function renderHTML() {
       canvas.style.zIndex = '-1';
       document.body.appendChild(canvas);
       
-      // 简单的粒子实现
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
       const particles = [];
-      const particleCount = 25; // 减少粒子数量提高性能
+      const particleCount = 25;
       
       for (let i = 0; i < particleCount; i++) {
         particles.push({
@@ -750,13 +1203,11 @@ function renderHTML() {
           if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
           if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
           
-          // 绘制粒子
           ctx.beginPath();
           ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
           ctx.fill();
           
-          // 绘制连线
           particles.forEach(otherParticle => {
             const dx = particle.x - otherParticle.x;
             const dy = particle.y - otherParticle.y;
@@ -778,7 +1229,6 @@ function renderHTML() {
       
       animate();
       
-      // 窗口大小变化时重置canvas
       window.addEventListener('resize', function() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -902,6 +1352,72 @@ function renderHTML() {
       });
     }
     
+    // 密码修改功能
+    function showChangePasswordModal() {
+      document.getElementById('passwordModal').style.display = 'flex';
+      document.getElementById('passwordMessage').textContent = '';
+    }
+    
+    function hideChangePasswordModal() {
+      document.getElementById('passwordModal').style.display = 'none';
+      document.getElementById('changePasswordForm').reset();
+    }
+    
+    async function handleChangePassword(event) {
+      event.preventDefault();
+      
+      const formData = new FormData(event.target);
+      const currentPassword = formData.get('currentPassword');
+      const newPassword = formData.get('newPassword');
+      const confirmPassword = formData.get('confirmPassword');
+      
+      const messageEl = document.getElementById('passwordMessage');
+      
+      if (newPassword !== confirmPassword) {
+        messageEl.textContent = '新密码与确认密码不一致';
+        messageEl.style.color = 'red';
+        return;
+      }
+      
+      if (newPassword.length < 6) {
+        messageEl.textContent = '密码长度不能少于6位';
+        messageEl.style.color = 'red';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          messageEl.textContent = '密码修改成功';
+          messageEl.style.color = 'green';
+          
+          setTimeout(() => {
+            hideChangePasswordModal();
+            alert('密码修改成功，请重新登录');
+            window.location.href = '/logout';
+          }, 1500);
+        } else {
+          messageEl.textContent = result.message;
+          messageEl.style.color = 'red';
+        }
+      } catch (error) {
+        messageEl.textContent = '修改失败，请重试';
+        messageEl.style.color = 'red';
+      }
+    }
+    
     // 初始化应用
     document.addEventListener('DOMContentLoaded', () => {
       // 初始化各种效果
@@ -917,10 +1433,15 @@ function renderHTML() {
       
       // 加载数据
       store.fetchData();
+      
+      // 绑定密码修改表单
+      document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
     });
     
     // 暴露 store 到全局
     window.store = store
+    window.showChangePasswordModal = showChangePasswordModal
+    window.hideChangePasswordModal = hideChangePasswordModal
   </script>
 </body>
 </html>`
