@@ -35,21 +35,15 @@ async function handleAPI(request) {
       { id: 3, name: 'AI平台', icon: '🤖', order: 3 },
       { id: 4, name: '设计素材', icon: '🎨', order: 4 },
       { id: 5, name: '娱乐影音', icon: '🎬', order: 5 },
-      { id: 6, name: '其他工具', icon: '🧰', order: 6 },
+      { id: 6, name: '域名服务', icon: '🧰', order: 6 },
       { id: 7, name: '开发资源', icon: '💻', order: 7 },
-      { id: 8, name: '社区博客', icon: '📚', order: 8 }
+      { id: 8, name: '社区博客', icon: '📚', order: 8 },
+      { id: 9, name: '其他工具', icon: '🧰', order: 9 },
     ],
     cards: [
       { id: 1, menuId: 1, title: 'Google', url: 'https://google.com', icon: '🌐', description: '全球搜索引擎' },
-      { id: 2, menuId: 1, title: 'GitHub', url: 'https://github.com', icon: '🐙', description: '代码托管平台' },
-      { id: 3, menuId: 1, title: 'ChatGPT', url: 'https://chatgpt.com', icon: '🤖', description: 'AI智能助手' },
-      { id: 4, menuId: 2, title: 'MDN', url: 'https://developer.mozilla.org', icon: '📖', description: '开发文档' },
-      { id: 5, menuId: 2, title: 'Vue.js', url: 'https://vuejs.org', icon: '⚡', description: '前端框架' },
-      { id: 6, menuId: 3, title: 'Coursera', url: 'https://coursera.org', icon: '🎓', description: '在线课程' },
-      { id: 7, menuId: 3, title: 'Bilibili', url: 'https://bilibili.com', icon: '📺', description: '视频学习' },
-      { id: 8, menuId: 4, title: 'Dribbble', url: 'https://dribbble.com', icon: '✨', description: '设计灵感' },
-      { id: 9, menuId: 4, title: 'Unsplash', url: 'https://unsplash.com', icon: '📷', description: '免费图片' },
-      { id: 10, menuId: 5, title: 'YouTube', url: 'https://youtube.com', icon: '🎥', description: '视频平台' }
+      { id: 1, menuId: 1, title: 'GMAIL', url: 'https://mail.google.com', icon: '📧', description: '谷歌邮箱服务' },
+      { id: 1, menuId: 1, title: 'GitHub', url: 'https://github.com', icon: '💻', description: '代码托管平台' }
     ],
     ads: [],
     friends: []
@@ -99,12 +93,12 @@ function renderHTML() {
   <style>
     :root {
     --primary-color: #2563eb;
-    --card-bg: rgba(255, 255, 255, 0.7); /* 增加透明度 */
-    --card-bg-hover: rgba(255, 255, 255, 0.9); /* 新增悬停背景色 */
+    --card-bg: rgba(255, 255, 255, 0.3); /* 增加透明度 */
+    --card-bg-hover: rgba(255, 255, 255, 0.5); /* 新增悬停背景色 */
     --text-color: #1e293b;
     --link-hover: #3b82f6;
     --header-color: rgba(255, 255, 255, 0.2);
-    --uptime-bg: rgba(255, 255, 255, 0.8);
+    --uptime-bg: rgba(255, 255, 255, 0.5);
     --glass-bg: rgba(255, 255, 255, 0.1);
     --glass-border: rgba(255, 255, 255, 0.2);
     --card-shadow: rgba(0, 0, 0, 0.1); /* 新增卡片阴影颜色 */
@@ -275,10 +269,10 @@ function renderHTML() {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: block;
       backdrop-filter: blur(16px) saturate(180%); /* 增加模糊效果 */
-      border: 1px solid rgba(255, 255, 255, 0.3); /* 调整边框透明度 */
+      border: 1px solid rgba(255, 255, 255, 0.1); /* 调整边框透明度 */
       box-shadow: 
         0 8px 32px var(--card-shadow),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3); /* 调整内阴影 */
+        inset 0 1px 0 rgba(255, 255, 255, 0.1); /* 调整内阴影 */
       position: relative;
       overflow: hidden;
       height: 120px;
@@ -292,7 +286,7 @@ function renderHTML() {
     .card:hover { 
       transform: translateY(-5px) scale(1.02);
       background: var(--card-bg-hover); /* 使用新的悬停背景色 */
-      border: 1px solid rgba(255, 255, 255, 0.5); /* 悬停时边框更明显 */
+      border: 1px solid rgba(255, 255, 255, 0.3); /* 悬停时边框更明显 */
       box-shadow: 
         0 12px 40px rgba(0, 0, 0, 0.15),
         0 6px 20px rgba(59, 130, 246, 0.2);
@@ -869,7 +863,7 @@ function renderHTML() {
     
     // 运行时间计算
     function updateUptime() {
-      const launchDate = new Date('2024-01-01T00:00:00');
+      const launchDate = new Date('2025-11-01T00:00:00');
       const now = new Date();
       const diff = now - launchDate;
       
