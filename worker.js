@@ -684,7 +684,7 @@ function renderHTML(username = '用户') {
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
       position: relative;
       overflow: hidden;
-      height: 120px;
+      height: 140px;
       display: flex;
       flex-direction: column;
       justify-content: center;
