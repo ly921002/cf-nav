@@ -540,6 +540,44 @@ function renderHTML(username = '用户') {
       color: white;
       font-size: 0.9rem;
     }
+
+    .theme-toggle-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      margin-right: 10px;
+    }
+    
+    .theme-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+    
+    .theme-icon {
+      font-size: 1.2rem;
+      transition: transform 0.3s ease;
+    }
+    
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+      .theme-toggle-btn {
+        width: 32px;
+        height: 32px;
+        margin-right: 8px;
+      }
+      
+      .theme-icon {
+        font-size: 1rem;
+      }
+    }
     
     .user-menu {
       position: relative;
@@ -921,8 +959,9 @@ function renderHTML(username = '用户') {
       }
     }
     
+    /* 系统偏好暗色模式 */
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-theme="light"]) {
         --text-color: #e2e8f0;
         --card-bg: rgba(15, 23, 42, 0.6);
         --card-bg-hover: rgba(30, 41, 59, 0.8);
@@ -933,34 +972,111 @@ function renderHTML(username = '用户') {
         --card-shadow: rgba(0, 0, 0, 0.3);
       }
       
-      .card {
+      :root:not([data-theme="light"]) .card {
         background: var(--card-bg);
         color: var(--text-color);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
       
-      .card:hover {
+      :root:not([data-theme="light"]) .card:hover {
         background: var(--card-bg-hover);
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
       
-      .card-title {
+      :root:not([data-theme="light"]) .card-title {
         color: #e2e8f0;
       }
       
-      .card-desc {
+      :root:not([data-theme="light"]) .card-desc {
         color: #94a3b8;
       }
       
-      .modal-content {
+      :root:not([data-theme="light"]) .modal-content {
         background: #1e293b;
         color: #e2e8f0;
       }
       
-      .modal h3 {
+      :root:not([data-theme="light"]) .modal h3 {
         color: #e2e8f0;
       }
+    
+      :root:not([data-theme="light"]) .search-input-group {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      :root:not([data-theme="light"]) .search-input-group:focus-within {
+        background: rgba(30, 41, 59, 0.9);
+        border-color: rgba(59, 130, 246, 0.5);
+      }
+      
+      :root:not([data-theme="light"]) .search-input {
+        color: #e2e8f0;
+      }
+      
+      :root:not([data-theme="light"]) .search-input::placeholder {
+        color: #94a3b8;
+      }
     }
+    
+    /* 手动选择的暗色模式 */
+    [data-theme="dark"] {
+      --text-color: #e2e8f0;
+      --card-bg: rgba(15, 23, 42, 0.6);
+      --card-bg-hover: rgba(30, 41, 59, 0.8);
+      --header-color: rgba(15, 23, 42, 0.5);
+      --uptime-bg: rgba(15, 23, 42, 0.8);
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --card-shadow: rgba(0, 0, 0, 0.3);
+    }
+    
+    [data-theme="dark"] .card {
+      background: var(--card-bg);
+      color: var(--text-color);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    [data-theme="dark"] .card:hover {
+      background: var(--card-bg-hover);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    [data-theme="dark"] .card-title {
+      color: #e2e8f0;
+    }
+    
+    [data-theme="dark"] .card-desc {
+      color: #94a3b8;
+    }
+    
+    [data-theme="dark"] .modal-content {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    
+    [data-theme="dark"] .modal h3 {
+      color: #e2e8f0;
+    }
+    
+    [data-theme="dark"] .search-input-group {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    [data-theme="dark"] .search-input-group:focus-within {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    
+    [data-theme="dark"] .search-input {
+      color: #e2e8f0;
+    }
+    
+    [data-theme="dark"] .search-input::placeholder {
+      color: #94a3b8;
+    }
+    
 
     .search-container {
       max-width: 600px;
@@ -1027,26 +1143,6 @@ function renderHTML(username = '用户') {
       transform: scale(0.95);
     }
 
-    @media (prefers-color-scheme: dark) {
-      .search-input-group {
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .search-input-group:focus-within {
-        background: rgba(30, 41, 59, 0.9);
-        border-color: rgba(59, 130, 246, 0.5);
-      }
-      
-      .search-input {
-        color: #e2e8f0;
-      }
-      
-      .search-input::placeholder {
-        color: #94a3b8;
-      }
-    }
-
     @media (max-width: 768px) {
       .search-container {
         max-width: 90%;
@@ -1086,6 +1182,9 @@ function renderHTML(username = '用户') {
   <div class="container">
     <header class="header">
       <div class="user-info">
+        <button id="theme-toggle" class="theme-toggle-btn" title="切换明暗模式">
+          <span class="theme-icon">🌙</span>
+        </button>
         <span>欢迎, ${username}</span>
         <div class="user-menu">
           <span>⚙️</span>
@@ -1234,7 +1333,39 @@ function renderHTML(username = '用户') {
         canvas.height = window.innerHeight;
       });
     }
-
+    // 明暗模式切换功能
+    function initThemeToggle() {
+      const themeToggle = document.getElementById('theme-toggle');
+      const themeIcon = themeToggle.querySelector('.theme-icon');
+      
+      // 检查本地存储的主题偏好
+      const savedTheme = localStorage.getItem('theme') || 
+                        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      
+      // 应用保存的主题
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeIcon.textContent = '🌙';
+      }
+      
+      // 切换主题
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          themeIcon.textContent = '🌙';
+          localStorage.setItem('theme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          themeIcon.textContent = '☀️';
+          localStorage.setItem('theme', 'dark');
+        }
+      });
+    }
     // Vue.js 风格的响应式数据管理
     const store = {
       state: {
@@ -1423,7 +1554,7 @@ function renderHTML(username = '用户') {
       // 初始化各种效果
       initParticles();
       initMouseEffect();
-
+      initThemeToggle();
       // 启动运行时间计时器
       updateUptime();
       setInterval(updateUptime, 1000);
