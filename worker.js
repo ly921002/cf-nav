@@ -1,18 +1,23 @@
-// Cloudflare Worker 单文件导航站应用
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
 // 密码配置
 const PASSWORD_CONFIG = {
-  defaultPassword: '123456',
-  sessionExpiry: 24,
+  defaultPassword: '0',
+  sessionExpiry: 24, // 小时
   maxAttempts: 5
 }
 
-// 存储会话
-let sessions = new Map()
-let passwordData = new Map()
+// 使用KV存储会话和密码数据
+const sessions = new Map();  // 使用KV或外部数据库来存储会话数据
+const passwordData = new Map();
+
+// 错误处理函数
+function handleError(error) {
+  console.error('Error occurred:', error);
+  return new Response('Internal Server Error', { status: 500 });
+}
 
 async function handleRequest(request) {
   const url = new URL(request.url)
@@ -46,7 +51,7 @@ async function handleRequest(request) {
     return redirectToLogin()
   }
   
-  // 主页面
+  // 渲染主页面
   return new Response(renderHTML(session.username), {
     headers: { 
       'Content-Type': 'text/html; charset=utf-8',
@@ -55,29 +60,28 @@ async function handleRequest(request) {
   })
 }
 
-// 处理登录POST请求
+// 登录POST请求处理
 async function handleLoginPost(request) {
   try {
     const formData = await request.formData()
     const username = formData.get('username') || 'admin'
     const password = formData.get('password')
-    
-    // 初始化密码存储
+
+    // 初次配置密码
     if (!passwordData.has('admin')) {
       passwordData.set('admin', PASSWORD_CONFIG.defaultPassword)
     }
-    
+
     const storedPassword = passwordData.get(username)
     
     if (storedPassword && storedPassword === password) {
-      // 生成会话ID
       const sessionId = generateSessionId()
       const session = {
         sessionId,
         username,
         expires: Date.now() + (PASSWORD_CONFIG.sessionExpiry * 3600 * 1000)
       }
-      
+
       sessions.set(sessionId, session)
       
       return new Response(null, {
@@ -95,7 +99,7 @@ async function handleLoginPost(request) {
   }
 }
 
-// 检查会话有效性
+// 会话有效性检查
 async function checkSession(request) {
   const cookieHeader = request.headers.get('Cookie')
   if (!cookieHeader) return null
@@ -111,8 +115,7 @@ async function checkSession(request) {
     return null
   }
   
-  // 更新会话过期时间
-  session.expires = Date.now() + (PASSWORD_CONFIG.sessionExpiry * 3600 * 1000)
+  session.expires = Date.now() + (PASSWORD_CONFIG.sessionExpiry * 3600 * 1000) // 更新过期时间
   return session
 }
 
@@ -278,7 +281,7 @@ function renderLoginPage(errorMessage = '') {
   })
 }
 
-// 处理退出登录
+// 退出登录处理
 async function handleLogout(request) {
   const cookieHeader = request.headers.get('Cookie')
   if (cookieHeader) {
@@ -288,7 +291,7 @@ async function handleLogout(request) {
       sessions.delete(sessionId)
     }
   }
-  
+
   return new Response(null, {
     status: 302,
     headers: {
@@ -298,22 +301,20 @@ async function handleLogout(request) {
   })
 }
 
-// API 处理函数
+// API 路由处理
 async function handleAPI(request) {
   const url = new URL(request.url)
   const path = url.pathname
   
-  // 修改密码API
   if (path === '/api/change-password' && request.method === 'POST') {
     return handleChangePassword(request)
   }
-  
-  // 检查登录状态
+
   const session = await checkSession(request)
-  if (!session && path !== '/api/login') {
+  if (!session) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
-  
+
   // 模拟数据存储
   const mockData = {
     menus: [
@@ -328,7 +329,6 @@ async function handleAPI(request) {
       { id: 9, name: '其他工具', icon: '🧰', order: 9 },
     ],
     cards: [
-      { id: 1, menuId: 1, title: 'Google', url: 'https://google.com', icon: '🌐', description: '全球搜索引擎' },
       { id: 1, menuId: 1, title: 'Google', url: 'https://google.com', icon: '🌐', description: '全球搜索引擎' }
     ],
     ads: [],
@@ -357,46 +357,32 @@ async function handleAPI(request) {
   return jsonResponse({ error: 'Not found' }, 404)
 }
 
-// 处理修改密码
+// 修改密码处理
 async function handleChangePassword(request) {
-  try {
-    const session = await checkSession(request)
-    if (!session) {
-      return jsonResponse({ error: 'Unauthorized' }, 401)
-    }
-    
-    const { currentPassword, newPassword } = await request.json()
-    const storedPassword = passwordData.get(session.username) || PASSWORD_CONFIG.defaultPassword
-    
-    if (storedPassword !== currentPassword) {
-      return jsonResponse({
-        success: false,
-        message: '当前密码错误'
-      }, 401)
-    }
-    
-    passwordData.set(session.username, newPassword)
-    
-    return jsonResponse({
-      success: true,
-      message: '密码修改成功'
-    })
-  } catch (error) {
-    return jsonResponse({
-      success: false,
-      message: '请求格式错误'
-    }, 400)
+  const session = await checkSession(request)
+  if (!session) {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
   }
+
+  const { currentPassword, newPassword } = await request.json()
+  const storedPassword = passwordData.get(session.username) || PASSWORD_CONFIG.defaultPassword
+
+  if (storedPassword !== currentPassword) {
+    return jsonResponse({ success: false, message: '当前密码错误' }, 401)
+  }
+
+  passwordData.set(session.username, newPassword)
+  return jsonResponse({ success: true, message: '密码修改成功' })
 }
 
-// 生成随机会话ID
+// 生成会话ID
 function generateSessionId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
 }
 
-// JSON 响应辅助函数
+// JSON响应辅助函数
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
